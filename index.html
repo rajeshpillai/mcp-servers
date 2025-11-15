@@ -1,0 +1,1445 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>MCP GUI – Bare Node MCP Client</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0b1120;
+      --bg-panel: #111827;
+      --bg-panel-soft: #020617;
+      --border: #1f2937;
+      --accent: #22c55e;
+      --accent-soft: rgba(34, 197, 94, 0.1);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --danger: #f97373;
+      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+      background: radial-gradient(circle at top, #1f2937 0, #020617 60%);
+      color: var(--text);
+    }
+
+    .app-root {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .app-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .app-subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .panel-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .panel-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .panel {
+      background: linear-gradient(145deg, var(--bg-panel) 0, var(--bg-panel-soft) 70%);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 12px 25px rgba(0,0,0,0.5);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    .panel-title {
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .badge {
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 0.7rem;
+      color: var(--muted);
+      background: rgba(15,23,42,0.8);
+    }
+
+    .panel-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    label {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    input[type="text"], textarea, select {
+      background: #020617;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      font-size: 0.85rem;
+      color: var(--text);
+      font-family: var(--font);
+      width: 100%;
+    }
+
+    input[type="text"]:focus, textarea:focus, select:focus {
+      outline: 1px solid var(--accent);
+      border-color: var(--accent);
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+      line-height: 1.3;
+    }
+
+    button {
+      border-radius: 6px;
+      border: 1px solid transparent;
+      padding: 5px 10px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: #0f172a;
+      background: var(--accent);
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
+      box-shadow: 0 4px 12px rgba(34,197,94,0.4);
+    }
+
+    button:hover {
+      background: #16a34a;
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(34,197,94,0.4);
+    }
+
+    button.secondary {
+      background: transparent;
+      color: var(--muted);
+      border-color: var(--border);
+      box-shadow: none;
+    }
+
+    button.secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(15,23,42,0.6);
+    }
+
+    button.small {
+      padding: 3px 8px;
+      font-size: 0.75rem;
+      border-radius: 999px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: rgba(15,23,42,0.8);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--danger);
+    }
+
+    .status-pill.active .status-dot {
+      background: var(--accent);
+      box-shadow: 0 0 6px rgba(34,197,94,0.8);
+    }
+
+    .status-pill.active {
+      color: var(--accent);
+      border-color: var(--accent-soft);
+      background: rgba(34,197,94,0.08);
+    }
+
+    .session-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .meta-label {
+      opacity: 0.8;
+    }
+
+    .meta-value {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+      word-break: break-all;
+    }
+
+    .tool-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 220px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .tool-item {
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      background: rgba(15,23,42,0.7);
+      transition: border 0.1s ease, background 0.1s ease;
+    }
+
+    .tool-item:hover {
+      border-color: var(--accent-soft);
+      background: rgba(15,23,42,0.95);
+    }
+
+    .tool-item.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.2);
+    }
+
+    .tool-name {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.78rem;
+    }
+
+    .tool-title {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .chip {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .json-view {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.8rem;
+      padding: 8px;
+      border-radius: 6px;
+      background: #020617;
+      border: 1px solid var(--border);
+      max-height: 220px;
+      overflow: auto;
+      white-space: pre;
+    }
+
+    .log-view {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.78rem;
+      background: #020617;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      padding: 8px;
+      max-height: 150px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
+    .log-line {
+      margin-bottom: 2px;
+      opacity: 0.86;
+    }
+
+    .log-line .time {
+      color: var(--muted);
+    }
+
+    .log-line .level-info {
+      color: var(--accent);
+    }
+
+    .log-line .level-error {
+      color: var(--danger);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+      opacity: 0.7;
+    }
+
+    .resources-list {
+      max-height: 170px;
+      overflow: auto;
+      padding-right: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .resource-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,0.7);
+    }
+
+    .resource-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .resource-uri {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.78rem;
+      word-break: break-all;
+    }
+
+    .resource-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* Progress UI */
+    .progress {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.78rem;
+    }
+
+    .progress-label {
+      color: var(--muted);
+    }
+
+    .progress-bar-track {
+      position: relative;
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: #020617;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #22c55e, #4ade80);
+      width: 0%;
+      transition: width 0.15s ease-out;
+    }
+
+    .progress-idle .progress-bar-fill {
+      background: linear-gradient(90deg, #4b5563, #6b7280);
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    console.log("MCP GUI booted");
+    // ------------------------------
+    // MCP Client – HTTP JSON + SSE helpers
+    // ------------------------------
+    class MCPClient {
+      constructor(baseUrl) {
+        this.baseUrl = baseUrl;
+        this.sessionId = null;
+        this.protocolVersion = "2025-06-18";
+        this.sseAbortController = null; // global GET /mcp SSE
+      }
+
+      setBaseUrl(url) {
+        this.baseUrl = url;
+      }
+
+      get hasSession() {
+        return !!this.sessionId;
+      }
+
+      async initialize(clientName = "mcp-gui") {
+        const body = {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: {
+            protocolVersion: this.protocolVersion,
+            capabilities: {},
+            clientInfo: { name: clientName, version: "0.1.0" }
+          }
+        };
+
+        const res = await fetch(this.baseUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          throw new Error("Initialize failed with status " + res.status);
+        }
+
+        const json = await res.json();
+        const sid = res.headers.get("Mcp-Session-Id") || res.headers.get("mcp-session-id");
+        if (!sid) {
+          throw new Error("Server did not return Mcp-Session-Id");
+        }
+
+        this.sessionId = sid;
+        return json;
+      }
+
+      async _request(method, params = {}, id = Date.now()) {
+        if (!this.baseUrl) throw new Error("Base URL not set");
+        if (!this.sessionId && method !== "initialize") {
+          throw new Error("No MCP session. Initialize first.");
+        }
+
+        const body = {
+          jsonrpc: "2.0",
+          id,
+          method,
+          params
+        };
+
+        const headers = {
+          "Content-Type": "application/json"
+        };
+
+        if (this.sessionId) {
+          headers["Mcp-Session-Id"] = this.sessionId;
+        }
+
+        const res = await fetch(this.baseUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body)
+        });
+
+        if (res.status === 202) {
+          return { jsonrpc: "2.0", id: null, result: { accepted: true } };
+        }
+
+        const json = await res.json();
+        if (json.error) {
+          throw new Error(`MCP error ${json.error.code}: ${json.error.message}`);
+        }
+        return json;
+      }
+
+      async sendInitializedNotification() {
+        return this._request("notifications/initialized", {}, null);
+      }
+
+      async listTools() {
+        const res = await this._request("tools/list", {}, 2);
+        return res.result?.tools || [];
+      }
+
+      async callTool(name, args = {}) {
+        const res = await this._request("tools/call", {
+          name,
+          arguments: args
+        }, 3);
+        return res.result;
+      }
+
+      async listResources() {
+        const res = await this._request("resources/list", {}, 4);
+        return res.result?.resources || [];
+      }
+
+      async readResource(uri) {
+        const res = await this._request("resources/read", { uri }, 5);
+        return res.result;
+      }
+
+      // ----------------------------
+      // Global SSE stream – GET /mcp
+      // ----------------------------
+      async openSseStream(onEvent, onStatusChange) {
+        if (!this.baseUrl) throw new Error("Base URL not set");
+        if (!this.sessionId) throw new Error("No MCP session. Initialize first.");
+
+        this.closeSseStream();
+
+        const controller = new AbortController();
+        this.sseAbortController = controller;
+        onStatusChange && onStatusChange("connecting");
+
+        try {
+          const res = await fetch(this.baseUrl, {
+            method: "GET",
+            headers: {
+              "Accept": "text/event-stream",
+              "Mcp-Session-Id": this.sessionId
+            },
+            signal: controller.signal
+          });
+
+          if (!res.ok) {
+            onStatusChange && onStatusChange("error");
+            throw new Error("SSE connect failed with status " + res.status);
+          }
+
+          onStatusChange && onStatusChange("connected");
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder("utf-8");
+          let buffer = "";
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            let sepIndex;
+            while ((sepIndex = buffer.indexOf("\n\n")) >= 0) {
+              const rawEvent = buffer.slice(0, sepIndex);
+              buffer = buffer.slice(sepIndex + 2);
+              this._parseSseEvent(rawEvent, onEvent);
+            }
+          }
+
+          onStatusChange && onStatusChange("closed");
+        } catch (err) {
+          if (controller.signal.aborted) {
+            onStatusChange && onStatusChange("closed");
+          } else {
+            onStatusChange && onStatusChange("error");
+            throw err;
+          }
+        } finally {
+          if (this.sseAbortController === controller) {
+            this.sseAbortController = null;
+          }
+        }
+      }
+
+      closeSseStream() {
+        if (this.sseAbortController) {
+          this.sseAbortController.abort();
+          this.sseAbortController = null;
+        }
+      }
+
+      _parseSseEvent(raw, onEvent) {
+        if (!raw.trim()) return;
+
+        const lines = raw.split("\n");
+        let dataLines = [];
+        for (const line of lines) {
+          if (line.startsWith("data:")) {
+            dataLines.push(line.slice(5).trimStart());
+          } else if (line.startsWith(":")) {
+            const comment = line.slice(1).trim();
+            onEvent && onEvent({ type: "comment", comment });
+          }
+        }
+
+        if (dataLines.length > 0) {
+          const joined = dataLines.join("\n");
+          try {
+            const obj = JSON.parse(joined);
+            onEvent && onEvent({ type: "data", data: obj });
+          } catch {
+            onEvent && onEvent({ type: "raw", raw: joined });
+          }
+        }
+      }
+
+      // ----------------------------
+      // Per-tool SSE – POST /mcp with Accept: text/event-stream
+      // ----------------------------
+      async callToolStream(name, args = {}, onEvent) {
+        if (!this.baseUrl) throw new Error("Base URL not set");
+        if (!this.sessionId) throw new Error("No MCP session. Initialize first.");
+
+        const id = Date.now();
+        const body = {
+          jsonrpc: "2.0",
+          id,
+          method: "tools/call",
+          params: {
+            name,
+            arguments: args
+          }
+        };
+
+        const headers = {
+          "Content-Type": "application/json",
+          "Accept": "text/event-stream",
+          "Mcp-Session-Id": this.sessionId
+        };
+
+        const res = await fetch(this.baseUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          throw new Error("Streamed tools/call failed with status " + res.status);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+        let finalResponse = null;
+
+        const handleEvent = (evt) => {
+          if (evt.type === "data") {
+            const msg = evt.data;
+            if (msg && msg.method === "logging/message") {
+              onEvent && onEvent({ kind: "log", msg });
+            } else if (msg && msg.jsonrpc === "2.0" && (msg.result || msg.error)) {
+              finalResponse = msg;
+              onEvent && onEvent({ kind: "final", msg });
+            } else {
+              onEvent && onEvent({ kind: "other", msg });
+            }
+          } else if (evt.type === "comment") {
+            onEvent && onEvent({ kind: "comment", comment: evt.comment });
+          } else if (evt.type === "raw") {
+            onEvent && onEvent({ kind: "raw", raw: evt.raw });
+          }
+        };
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let sepIndex;
+          while ((sepIndex = buffer.indexOf("\n\n")) >= 0) {
+            const rawEvent = buffer.slice(0, sepIndex);
+            buffer = buffer.slice(sepIndex + 2);
+            this._parseSseEvent(rawEvent, handleEvent);
+          }
+        }
+
+        return finalResponse;
+      }
+    }
+
+    // ------------------------------------
+    // MCP GUI App – Vanilla OOP + Templates
+    // ------------------------------------
+    class MCPGuiApp {
+      constructor(rootElement) {
+        this.root = rootElement;
+        this.client = new MCPClient("http://127.0.0.1:3333/mcp");
+        this.state = {
+          sessionInfo: null,
+          tools: [],
+          selectedTool: null,
+          toolArgsText: "{}",
+          toolResult: null,
+          resources: [],
+          selectedResourceContent: null,
+          logs: [],
+          sseStatus: "disconnected",   // global SSE
+          toolStreamEvents: [],        // per-tool SSE events
+          toolProgress: { active: false, value: 0, label: "Idle" }
+        };
+      }
+
+      init() {
+        this.render();
+        this.bindEvents();
+      }
+
+      // --- Rendering ---
+
+      render() {
+        this.root.innerHTML = this.renderLayout();
+        this.cacheDom();
+        this.afterRender();
+      }
+
+      renderLayout() {
+        const s = this.state;
+
+        const sessionIdShort = this.client.sessionId
+          ? this.client.sessionId.slice(0, 8) + "…"
+          : "None";
+
+        const sessionStatusClass = this.client.hasSession ? "status-pill active" : "status-pill";
+
+        const sseLabelMap = {
+          disconnected: "Stream: disconnected",
+          connecting: "Stream: connecting…",
+          connected: "Stream: connected",
+          closed: "Stream: closed",
+          error: "Stream: error"
+        };
+        const sseLabel = sseLabelMap[s.sseStatus] || "Stream: unknown";
+
+        const ssePillClass =
+          s.sseStatus === "connected"
+            ? "status-pill active"
+            : "status-pill";
+
+        const toolListHtml = s.tools.length
+          ? s.tools.map(t => this.renderToolItem(t)).join("")
+          : `<div style="font-size:0.8rem;color:var(--muted);">No tools loaded yet. Click <b>List Tools</b>.</div>`;
+
+        const resourcesListHtml = s.resources.length
+          ? s.resources.map(r => this.renderResourceRow(r)).join("")
+          : `<div style="font-size:0.8rem;color:var(--muted);">No resources loaded yet. Click <b>List Resources</b>.</div>`;
+
+        const toolSchemaJson = s.selectedTool
+          ? JSON.stringify(s.selectedTool.inputSchema || {}, null, 2)
+          : "// Select a tool to see its schema";
+
+        const toolResultJson = s.toolResult
+          ? JSON.stringify(s.toolResult, null, 2)
+          : "// Call a tool (JSON or streamed) to see the result here";
+
+        const resourceContent = s.selectedResourceContent
+          ? JSON.stringify(s.selectedResourceContent, null, 2)
+          : "// Read a resource to see content here";
+
+        const logsHtml = s.logs.map(line => this.renderLogLine(line)).join("");
+
+        const sseButtonLabel =
+          s.sseStatus === "connected" || s.sseStatus === "connecting"
+            ? "Disconnect SSE"
+            : "Connect SSE";
+
+        const toolStreamText = s.toolStreamEvents.length
+          ? s.toolStreamEvents.join("\n")
+          : "// Streamed tool events (per-call) will appear here when you use Stream Call.";
+
+        const progressClass = s.toolProgress.active ? "progress" : "progress progress-idle";
+        const progressLabel = s.toolProgress.label;
+        const progressValue = s.toolProgress.value;
+
+        return `
+          <div class="app-root">
+            <header class="app-header">
+              <div>
+                <div class="app-title">MCP GUI – Bare Node HTTP Client</div>
+                <div class="app-subtitle">Connect, inspect tools, call them (JSON or SSE), and read resources from your MCP server.</div>
+              </div>
+              <div class="${sessionStatusClass}">
+                <span class="status-dot"></span>
+                <span>${this.client.hasSession ? "Session active" : "No session"}</span>
+              </div>
+            </header>
+
+            <section class="panel">
+              <div class="panel-header">
+                <div class="panel-title">Connection</div>
+                <span class="badge">Protocol ${this.client.protocolVersion}</span>
+              </div>
+              <div class="panel-body">
+                <div class="row">
+                  <label style="flex:1 1 260px;">
+                    MCP Endpoint
+                    <input type="text" id="mcp-base-url" value="${this.client.baseUrl}" />
+                  </label>
+                  <button id="btn-init" class="small">Initialize</button>
+                  <button id="btn-notify-initialized" class="small secondary">Send initialized</button>
+                  <button id="btn-sse-toggle" class="small secondary">${sseButtonLabel}</button>
+                </div>
+                <div class="session-meta" style="justify-content: space-between; align-items: center;">
+                  <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                    <div>
+                      <span class="meta-label">Session:</span>
+                      <span class="meta-value">${sessionIdShort}</span>
+                    </div>
+                    <div>
+                      <span class="meta-label">Server name:</span>
+                      <span class="meta-value">${s.sessionInfo?.result?.serverInfo?.name || "?"}</span>
+                    </div>
+                    <div>
+                      <span class="meta-label">Title:</span>
+                      <span class="meta-value">${s.sessionInfo?.result?.serverInfo?.title || "?"}</span>
+                    </div>
+                  </div>
+                  <div class="${ssePillClass}">
+                    <span class="status-dot"></span>
+                    <span>${sseLabel}</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel-grid">
+              <!-- Left: Tools + Resources -->
+              <div class="panel" style="gap:10px;">
+                <div class="panel-header">
+                  <div class="panel-title">Tools & Resources</div>
+                  <div style="display:flex;gap:6px;">
+                    <button id="btn-list-tools" class="small secondary">List Tools</button>
+                    <button id="btn-list-resources" class="small secondary">List Resources</button>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <div class="row">
+                    <div class="pill">
+                      <span class="pill-dot"></span>
+                      <span>Tools (${s.tools.length})</span>
+                    </div>
+                  </div>
+                  <div class="tool-list" id="tool-list">
+                    ${toolListHtml}
+                  </div>
+
+                  <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;" />
+
+                  <div class="row">
+                    <div class="pill">
+                      <span class="pill-dot"></span>
+                      <span>Resources (${s.resources.length})</span>
+                    </div>
+                  </div>
+                  <div class="resources-list" id="resources-list">
+                    ${resourcesListHtml}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Tool detail & results / Resource content -->
+              <div class="panel" style="gap:10px;">
+                <div class="panel-header">
+                  <div class="panel-title">
+                    ${s.selectedTool ? `Tool: ${s.selectedTool.name}` : "Tool / Resource Detail"}
+                  </div>
+                  <div style="display:flex;gap:6px;">
+                    <button id="btn-call-tool" class="small"${
+                      s.selectedTool ? "" : " disabled style='opacity:0.4;pointer-events:none;'"
+                    }>Call (JSON)</button>
+                    <button id="btn-call-tool-stream" class="small secondary"${
+                      s.selectedTool ? "" : " disabled style='opacity:0.4;pointer-events:none;'"
+                    }>Stream Call</button>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <!-- Progress UI -->
+                  <div class="${progressClass}" id="tool-progress-container">
+                    <div class="progress-label" id="tool-progress-label">
+                      ${this.escapeHtml(progressLabel)}
+                    </div>
+                    <div class="progress-bar-track">
+                      <div class="progress-bar-fill" id="tool-progress-fill" style="width:${progressValue}%;"></div>
+                    </div>
+                  </div>
+
+                  <label>
+                    Tool Arguments (JSON)
+                    <textarea id="tool-args">${this.escapeHtml(
+                      s.toolArgsText
+                    )}</textarea>
+                  </label>
+
+                  <label>
+                    Tool Input Schema
+                    <pre class="json-view" id="tool-schema">${this.escapeHtml(toolSchemaJson)}</pre>
+                  </label>
+
+                  <label>
+                    Tool Result
+                    <pre class="json-view" id="tool-result">${this.escapeHtml(toolResultJson)}</pre>
+                  </label>
+
+                  <label>
+                    Tool Stream Events (per-call SSE)
+                    <pre class="json-view" id="tool-stream-events">${this.escapeHtml(toolStreamText)}</pre>
+                  </label>
+
+                  <label>
+                    Resource Content (last read)
+                    <pre class="json-view" id="resource-content">${this.escapeHtml(resourceContent)}</pre>
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <div class="panel-title">Log</div>
+                <span class="badge">Client-side + global SSE</span>
+              </div>
+              <div class="panel-body">
+                <div class="log-view" id="log-view">
+                  ${logsHtml || "// Logs will appear here"}
+                </div>
+              </div>
+            </section>
+          </div>
+        `;
+      }
+
+      renderToolItem(tool) {
+        const isActive = this.state.selectedTool && this.state.selectedTool.name === tool.name;
+        const cls = isActive ? "tool-item active" : "tool-item";
+        const title = tool.title || tool.description || "";
+        return `
+          <div class="${cls}" data-tool-name="${tool.name}">
+            <div>
+              <div class="tool-name">${tool.name}</div>
+              <div class="tool-title">${this.escapeHtml(title)}</div>
+            </div>
+            <span class="chip">${tool.inputSchema ? "schema" : "no schema"}</span>
+          </div>
+        `;
+      }
+
+      renderResourceRow(r) {
+        return `
+          <div class="resource-row" data-resource-uri="${r.uri}">
+            <div class="resource-main">
+              <div class="resource-uri">${this.escapeHtml(r.uri)}</div>
+              <div class="resource-meta">${this.escapeHtml(r.title || r.description || "")}</div>
+            </div>
+            <button class="small secondary">Read</button>
+          </div>
+        `;
+      }
+
+      renderLogLine(line) {
+        const levelClass = line.level === "error" ? "level-error" : "level-info";
+        const time = new Date(line.time).toLocaleTimeString();
+        return `
+          <div class="log-line">
+            <span class="time">[${time}]</span>
+            <span class="${levelClass}">${line.level.toUpperCase()}</span>
+            <span>${this.escapeHtml(line.message)}</span>
+          </div>
+        `;
+      }
+
+      cacheDom() {
+        this.dom = {
+          baseUrlInput: document.getElementById("mcp-base-url"),
+          btnInit: document.getElementById("btn-init"),
+          btnNotifyInit: document.getElementById("btn-notify-initialized"),
+          btnSseToggle: document.getElementById("btn-sse-toggle"),
+          btnListTools: document.getElementById("btn-list-tools"),
+          btnListResources: document.getElementById("btn-list-resources"),
+          btnCallTool: document.getElementById("btn-call-tool"),
+          btnCallToolStream: document.getElementById("btn-call-tool-stream"),
+          toolList: document.getElementById("tool-list"),
+          resourcesList: document.getElementById("resources-list"),
+          toolArgs: document.getElementById("tool-args"),
+          toolSchema: document.getElementById("tool-schema"),
+          toolResult: document.getElementById("tool-result"),
+          toolStreamEvents: document.getElementById("tool-stream-events"),
+          resourceContent: document.getElementById("resource-content"),
+          logView: document.getElementById("log-view"),
+          toolProgressFill: document.getElementById("tool-progress-fill"),
+          toolProgressLabel: document.getElementById("tool-progress-label"),
+          toolProgressContainer: document.getElementById("tool-progress-container")
+        };
+      }
+
+      afterRender() {
+        this.scrollLogToBottom();
+      }
+
+      bindEvents() {
+        this.root.addEventListener("click", (e) => {
+          const target = e.target;
+
+          if (target.id === "btn-init") {
+            this.handleInitialize();
+          } else if (target.id === "btn-notify-initialized") {
+            this.handleNotifyInitialized();
+          } else if (target.id === "btn-list-tools") {
+            this.handleListTools();
+          } else if (target.id === "btn-list-resources") {
+            this.handleListResources();
+          } else if (target.id === "btn-call-tool") {
+            this.handleCallTool();
+          } else if (target.id === "btn-call-tool-stream") {
+            this.handleCallToolStream();
+          } else if (target.id === "btn-sse-toggle") {
+            this.handleToggleSse();
+          } else if (target.closest(".tool-item")) {
+            const el = target.closest(".tool-item");
+            const name = el.getAttribute("data-tool-name");
+            this.handleSelectTool(name);
+          } else if (target.closest(".resource-row")) {
+            const row = target.closest(".resource-row");
+            const uri = row.getAttribute("data-resource-uri");
+            if (target.tagName === "BUTTON") {
+              this.handleReadResource(uri);
+            }
+          }
+        });
+
+        this.root.addEventListener("change", (e) => {
+          const target = e.target;
+          if (target.id === "mcp-base-url") {
+            this.client.setBaseUrl(target.value.trim());
+            this.log("info", "Base URL updated to " + this.client.baseUrl);
+          } else if (target.id === "tool-args") {
+            this.state.toolArgsText = target.value;
+          }
+        });
+      }
+
+      // --- Handlers ---
+
+      async handleInitialize() {
+        console.log("Initialize button clicked");
+        try {
+          this.client.setBaseUrl(this.dom.baseUrlInput.value.trim());
+          this.log("info", "Initializing MCP session…");
+          const res = await this.client.initialize("mcp-gui");
+          this.state.sessionInfo = res;
+          this.log("info", "Initialized. Session ID: " + this.client.sessionId);
+        } catch (err) {
+          this.log("error", "Initialize failed: " + err.message);
+        }
+        this.render();
+      }
+
+      async handleNotifyInitialized() {
+        if (!this.client.hasSession) {
+          this.log("error", "No session. Initialize first.");
+          return;
+        }
+        try {
+          this.log("info", "Sending notifications/initialized…");
+          await this.client.sendInitializedNotification();
+          this.log("info", "notifications/initialized accepted (202).");
+        } catch (err) {
+          this.log("error", "Notification failed: " + err.message);
+        }
+        this.render();
+      }
+
+      async handleListTools() {
+        if (!this.client.hasSession) {
+          this.log("error", "No session. Initialize first.");
+          return;
+        }
+        try {
+          this.log("info", "Listing tools…");
+          const tools = await this.client.listTools();
+          this.state.tools = tools;
+          this.log("info", `Loaded ${tools.length} tools.`);
+        } catch (err) {
+          this.log("error", "tools/list failed: " + err.message);
+        }
+        this.render();
+      }
+
+      handleSelectTool(name) {
+        const tool = this.state.tools.find(t => t.name === name);
+        if (!tool) return;
+        this.state.selectedTool = tool;
+        this.state.toolArgsText = this.buildDefaultArgs(tool);
+        this.log("info", `Selected tool: ${name}`);
+        this.render();
+      }
+
+      buildDefaultArgs(tool) {
+        if (!tool.inputSchema || !tool.inputSchema.properties) {
+          return "{}";
+        }
+        const props = tool.inputSchema.properties;
+        const obj = {};
+        for (const key of Object.keys(props)) {
+          const prop = props[key];
+          if (prop.type === "string") obj[key] = "";
+          else if (prop.type === "array") obj[key] = [];
+          else if (prop.type === "number" || prop.type === "integer") obj[key] = 0;
+          else if (prop.type === "boolean") obj[key] = false;
+          else obj[key] = null;
+        }
+        return JSON.stringify(obj, null, 2);
+      }
+
+      async handleCallTool() {
+        if (!this.client.hasSession) {
+          this.log("error", "No session. Initialize first.");
+          return;
+        }
+        if (!this.state.selectedTool) {
+          this.log("error", "No tool selected.");
+          return;
+        }
+        let args;
+        try {
+          args = JSON.parse(this.dom.toolArgs.value || "{}");
+        } catch (err) {
+          this.log("error", "Invalid JSON in arguments: " + err.message);
+          return;
+        }
+        try {
+          this.log("info", `Calling tool ${this.state.selectedTool.name} (JSON)…`);
+          const result = await this.client.callTool(this.state.selectedTool.name, args);
+          this.state.toolResult = result;
+          this.log("info", "Tool call (JSON) completed.");
+        } catch (err) {
+          this.log("error", "tools/call failed: " + err.message);
+        }
+        this.render();
+      }
+
+      async handleListResources() {
+        if (!this.client.hasSession) {
+          this.log("error", "No session. Initialize first.");
+          return;
+        }
+        try {
+          this.log("info", "Listing resources…");
+          const resources = await this.client.listResources();
+          this.state.resources = resources;
+          this.log("info", `Loaded ${resources.length} resources.`);
+        } catch (err) {
+          this.log("error", "resources/list failed: " + err.message);
+        }
+        this.render();
+      }
+
+      async handleReadResource(uri) {
+        if (!this.client.hasSession) {
+          this.log("error", "No session. Initialize first.");
+          return;
+        }
+        try {
+          this.log("info", `Reading resource ${uri}…`);
+          const result = await this.client.readResource(uri);
+          this.state.selectedResourceContent = result;
+          this.log("info", "Resource read completed.");
+        } catch (err) {
+          this.log("error", "resources/read failed: " + err.message);
+        }
+        this.render();
+      }
+
+      // --- Per-tool streaming handler ---
+
+      async handleCallToolStream() {
+        if (!this.client.hasSession) {
+          this.log("error", "No session. Initialize first.");
+          return;
+        }
+        if (!this.state.selectedTool) {
+          this.log("error", "No tool selected.");
+          return;
+        }
+
+        let args;
+        try {
+          args = JSON.parse(this.dom.toolArgs.value || "{}");
+        } catch (err) {
+          this.log("error", "Invalid JSON in arguments: " + err.message);
+          return;
+        }
+
+        // Reset stream events + result and set initial progress
+        this.state.toolStreamEvents = [];
+        this.state.toolResult = null;
+        this.state.toolProgress = { active: true, value: 0, label: "Starting…" };
+        this.render();
+
+        const toolName = this.state.selectedTool.name;
+        this.log("info", `Streaming tools/call for ${toolName}…`);
+
+        try {
+          const final = await this.client.callToolStream(toolName, args, (evt) => {
+            this.handleToolStreamEvent(evt);
+          });
+
+          if (final) {
+            if (final.error) {
+              this.log("error", `Streamed tools/call error: ${final.error.message}`);
+              this.setToolProgressDone("Error");
+            } else {
+              this.state.toolResult = final.result;
+              this.log("info", "Streamed tools/call completed (final response).");
+              this.setToolProgressDone("Done");
+            }
+            this.render();
+          } else {
+            this.log("error", "Streamed tools/call finished without final response.");
+            this.setToolProgressDone("Finished");
+            this.render();
+          }
+        } catch (err) {
+          this.log("error", "Streamed tools/call failed: " + err.message);
+          this.setToolProgressDone("Error");
+          this.render();
+        }
+      }
+
+      // Parse and handle per-tool SSE events
+      handleToolStreamEvent(evt) {
+        const lines = this.state.toolStreamEvents;
+
+        if (evt.kind === "comment") {
+          if (evt.comment === "keepalive") return;
+          lines.push(`[comment] ${evt.comment}`);
+        } else if (evt.kind === "log") {
+          const msg = evt.msg;
+          const level = msg.params?.level || "info";
+          const message = msg.params?.message || "";
+          lines.push(`[log/${level}] ${message}`);
+          this.log(level === "error" ? "error" : "info", `[tool stream] ${message}`);
+
+          // --- Progress parsing ---
+          // Expect messages like:
+          //   "progress: 1/5"
+          //   "progress: 40%"
+          this.tryUpdateProgressFromMessage(message);
+        } else if (evt.kind === "final") {
+          lines.push(`[final] ${JSON.stringify(evt.msg)}`);
+        } else if (evt.kind === "raw") {
+          lines.push(`[raw] ${evt.raw}`);
+        } else if (evt.kind === "other") {
+          lines.push(`[data] ${JSON.stringify(evt.msg)}`);
+        }
+
+        if (lines.length > 300) {
+          lines.shift();
+        }
+
+        if (this.dom && this.dom.toolStreamEvents) {
+          this.dom.toolStreamEvents.textContent = lines.join("\n");
+        }
+      }
+
+      // Try to extract progress from a log message
+      tryUpdateProgressFromMessage(message) {
+        const trimmed = String(message || "").trim();
+
+        // Pattern 1: "progress: 3/10"
+        let m = /progress\s*:\s*(\d+)\s*\/\s*(\d+)/i.exec(trimmed);
+        if (m) {
+          const current = parseInt(m[1], 10);
+          const total = parseInt(m[2], 10) || 1;
+          const pct = Math.max(0, Math.min(100, Math.round((current / total) * 100)));
+          this.setToolProgress(pct, `${current} / ${total} (${pct}%)`);
+          return;
+        }
+
+        // Pattern 2: "progress: 40%"
+        m = /progress\s*:\s*(\d+)\s*%/i.exec(trimmed);
+        if (m) {
+          const pct = Math.max(0, Math.min(100, parseInt(m[1], 10)));
+          this.setToolProgress(pct, `${pct}%`);
+          return;
+        }
+
+        // If no pattern matched, don't change progress.
+      }
+
+      setToolProgress(pct, label) {
+        this.state.toolProgress = {
+          active: true,
+          value: pct,
+          label: label
+        };
+
+        if (this.dom && this.dom.toolProgressFill && this.dom.toolProgressLabel && this.dom.toolProgressContainer) {
+          this.dom.toolProgressFill.style.width = pct + "%";
+          this.dom.toolProgressLabel.textContent = label;
+          this.dom.toolProgressContainer.classList.remove("progress-idle");
+        }
+      }
+
+      setToolProgressDone(label = "Done") {
+        this.state.toolProgress = {
+          active: false,
+          value: 100,
+          label
+        };
+        if (this.dom && this.dom.toolProgressFill && this.dom.toolProgressLabel && this.dom.toolProgressContainer) {
+          this.dom.toolProgressFill.style.width = "100%";
+          this.dom.toolProgressLabel.textContent = label;
+          this.dom.toolProgressContainer.classList.add("progress-idle");
+        }
+      }
+
+      // --- Global SSE Handlers ---
+
+      async handleToggleSse() {
+        if (!this.client.hasSession) {
+          this.log("error", "No session. Initialize first.");
+          return;
+        }
+
+        if (this.state.sseStatus === "connected" || this.state.sseStatus === "connecting") {
+          this.client.closeSseStream();
+          this.state.sseStatus = "closed";
+          this.log("info", "Global SSE stream closed.");
+          this.render();
+          return;
+        }
+
+        this.state.sseStatus = "connecting";
+        this.log("info", "Opening global SSE stream to MCP server…");
+        this.render();
+
+        this.client
+          .openSseStream(
+            (evt) => this.handleSseEvent(evt),
+            (status) => {
+              this.state.sseStatus = status;
+              this.render();
+            }
+          )
+          .catch((err) => {
+            this.log("error", "Global SSE error: " + err.message);
+            this.state.sseStatus = "error";
+            this.render();
+          });
+      }
+
+      handleSseEvent(evt) {
+        if (evt.type === "comment") {
+          if (evt.comment === "keepalive") return;
+          this.log("info", `[SSE comment] ${evt.comment}`);
+        } else if (evt.type === "data") {
+          const msg = evt.data;
+          if (msg && msg.method === "logging/message") {
+            const level = msg.params?.level || "info";
+            const message = msg.params?.message || "logging/message";
+            this.log(level === "error" ? "error" : "info", `[SSE log] ${message}`);
+          } else {
+            this.log("info", "[SSE data] " + JSON.stringify(msg));
+          }
+        } else if (evt.type === "raw") {
+          this.log("info", "[SSE raw] " + evt.raw);
+        }
+      }
+
+      // --- Logging & helpers ---
+
+      log(level, message) {
+        this.state.logs.push({
+          time: Date.now(),
+          level,
+          message
+        });
+        if (this.state.logs.length > 200) {
+          this.state.logs.shift();
+        }
+        if (this.dom && this.dom.logView) {
+          this.dom.logView.innerHTML = this.state.logs.map(l => this.renderLogLine(l)).join("");
+          this.scrollLogToBottom();
+        }
+      }
+
+      scrollLogToBottom() {
+        if (!this.dom || !this.dom.logView) return;
+        this.dom.logView.scrollTop = this.dom.logView.scrollHeight;
+      }
+
+      escapeHtml(str) {
+        if (str == null) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+    }
+
+    // Bootstrap
+    document.addEventListener("DOMContentLoaded", () => {
+      const appRoot = document.getElementById("app");
+      const app = new MCPGuiApp(appRoot);
+      app.init();
+    });
+  </script>
+</body>
+</html>
