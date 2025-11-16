@@ -1,18 +1,22 @@
 # Start the frontend
 
-```npx serve .
+```
+npx serve .
 ```
 
 # Start any of the servers
-```node ./mcp-server.js
+```
+node ./mcp-server.js
 ```
 
 OR
 
-```node ./express-mcp-server.js
+```
+node ./express-mcp-server.js
 ```
 
 OR
 
-```bun run ./bun-mcp-server.js
+```
+bun run ./bun-mcp-server.js
 ```
