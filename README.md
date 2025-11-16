@@ -1,4 +1,5 @@
 # Start the frontend
+
 ```npx serve .
 
 
@@ -10,7 +11,5 @@ OR
 ```node ./express-mcp-server.js
 
 OR
-
-
 
 ```bun run ./bun-mcp-server.js
